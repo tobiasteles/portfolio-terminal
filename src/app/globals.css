@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: theme("colors.term.bg");
+    color-scheme: dark;
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.term.line") transparent;
+  }
+  body {
+    @apply bg-term-bg font-mono text-[15px] leading-relaxed text-term-fg antialiased;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.term.line") transparent;
+  }
+  ::selection {
+    background: theme("colors.term.neon");
+    color: theme("colors.term.ink");
+  }
+  :focus-visible {
+    outline: 2px solid theme("colors.term.neon");
+    outline-offset: 2px;
+  }
+  a {
+    @apply text-term-neon underline decoration-term-neon/40 underline-offset-4 hover:decoration-term-neon;
+  }
+
+  /* Efeito CRT: linhas de varredura bem discretas + vinheta. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 0.35) 100%),
+      repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgb(0 0 0 / 0.12) 3px);
+  }
+  body:has(.no-crt)::after {
+    display: none;
+  }
+}
+
+@layer components {
+  .glow {
+    text-shadow:
+      0 0 6px rgb(61 255 139 / 0.55),
+      0 0 18px rgb(61 255 139 / 0.25);
+  }
+
+  /* Cursor de bloco do prompt. */
+  .term-cursor {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.15em;
+    vertical-align: text-bottom;
+    background: theme("colors.term.neon");
+    box-shadow: 0 0 8px rgb(61 255 139 / 0.6);
+    animation: blink 1.1s steps(1) infinite;
+  }
+  .term-cursor[data-focused="false"] {
+    background: transparent;
+    outline: 1px solid theme("colors.term.neon");
+    box-shadow: none;
+    animation: none;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* Sequência de boot: cada linha aparece em escada, só com CSS. */
+  .boot-line {
+    opacity: 0;
+    animation: boot-in 1ms linear forwards;
+    animation-delay: calc(var(--i, 0) * 130ms);
+  }
+  @keyframes boot-in {
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boot-line,
+    .ascii-row {
+      opacity: 1;
+      animation: none;
+    }
+    .term-cursor {
+      animation: none;
+    }
+  }
+
+  .glow-soft {
+    text-shadow: 0 0 5px rgb(61 255 139 / 0.35);
+  }
+
+  /* Retrato ASCII: as linhas aparecem em sequência (efeito de scan). */
+  .ascii-row {
+    display: block;
+    opacity: 0;
+    animation: boot-in 1ms linear forwards;
+    animation-delay: calc(var(--r, 0) * 28ms);
+  }
+
+  .badge {
+    @apply inline-block border border-term-line px-2 py-0.5 text-xs text-term-neon;
+  }
+
+  /* Campos do formulário dentro do terminal. */
+  .t-input {
+    @apply w-full border-b border-term-line bg-transparent py-1 text-term-fg placeholder:text-term-dim/60 focus:border-term-neon;
+  }
+
+  /* Admin */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border border-term-line bg-transparent px-3 py-1.5 text-sm text-term-fg no-underline transition-colors hover:border-term-neon hover:text-term-neon disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply border-term-neon text-term-neon hover:bg-term-neon hover:text-term-ink;
+  }
+  .btn-danger {
+    @apply border-term-danger/50 text-term-danger hover:border-term-danger hover:bg-term-danger hover:text-term-ink;
+  }
+  .card {
+    @apply border border-term-line bg-term-panel p-4;
+  }
+  .admin-input {
+    @apply w-full border border-term-line bg-term-bg px-3 py-2 text-term-fg placeholder:text-term-dim/60 focus:border-term-neon;
+  }
+}
