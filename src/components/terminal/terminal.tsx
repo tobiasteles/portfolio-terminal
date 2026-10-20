@@ -1,9 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import type { Faq, Profile, Project, Skill } from "@/db/schema";
 import { Boot } from "./boot";
-import { COMMANDS, QUICK_COMMANDS, resolveCommand, type CommandName } from "./commands";
+import {
+  COMMANDS,
+  QUICK_COMMANDS,
+  resolveCommand,
+  type CommandName,
+} from "./commands";
 import {
   AboutOutput,
   ContactOutput,
@@ -16,7 +28,12 @@ import {
   UnknownOutput,
 } from "./outputs";
 
-type Props = { profile: Profile; skills: Skill[]; projects: Project[]; faqs: Faq[] };
+type Props = {
+  profile: Profile;
+  skills: Skill[];
+  projects: Project[];
+  faqs: Faq[];
+};
 
 type Entry = {
   id: number;
@@ -50,7 +67,10 @@ function triggerDownload(url: string) {
 }
 
 export function Terminal({ profile, skills, projects, faqs }: Props) {
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([
+    { id: -2, input: "about", kind: "about" },
+    { id: -1, input: "projects", kind: "projects" },
+  ]);
   const [showBoot, setShowBoot] = useState(true);
   const [value, setValue] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -106,7 +126,11 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
       const head = input.split(/\s+/)[0];
 
       if (head.toLowerCase() === "sudo") {
-        push({ input, kind: "text", text: "visitante não está no arquivo sudoers. Este incidente será ignorado (por enquanto)." });
+        push({
+          input,
+          kind: "text",
+          text: "visitante não está no arquivo sudoers. Este incidente será ignorado (por enquanto).",
+        });
         focusInput();
         return;
       }
@@ -119,7 +143,8 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
         push({ input, kind: "unknown", text: head });
       } else {
         push({ input, kind: command });
-        if (command === "resume" && profile.resumeUrl) triggerDownload(profile.resumeUrl);
+        if (command === "resume" && profile.resumeUrl)
+          triggerDownload(profile.resumeUrl);
       }
 
       if (command !== "contact") focusInput();
@@ -130,7 +155,9 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
   const complete = () => {
     const q = value.trim().toLowerCase();
     if (!q) return;
-    const matches = COMMANDS.map((c) => c.name as string).filter((n) => n.startsWith(q));
+    const matches = COMMANDS.map((c) => c.name as string).filter((n) =>
+      n.startsWith(q),
+    );
     if (matches.length === 1) {
       setValue(matches[0]);
       setCursor(matches[0].length);
@@ -205,10 +232,15 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
   };
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col" aria-label="Terminal interativo">
+    <section
+      className="flex min-h-0 flex-1 flex-col"
+      aria-label="Terminal interativo"
+    >
       <div className="flex shrink-0 items-center justify-between border-b border-term-line bg-term-panel px-4 py-2 text-xs text-term-dim">
         <span>visitante@portfolio: ~</span>
-        <span className="hidden sm:inline">Tab completa · ↑↓ histórico · Ctrl+L limpa</span>
+        <span className="hidden sm:inline">
+          Tab completa · ↑↓ histórico · Ctrl+L limpa
+        </span>
       </div>
 
       <nav
@@ -216,18 +248,31 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
         className="flex shrink-0 gap-2 overflow-x-auto border-b border-term-line px-4 py-2"
       >
         {QUICK_COMMANDS.map((name) => (
-          <button key={name} type="button" onClick={() => run(name)} className="btn shrink-0">
+          <button
+            key={name}
+            type="button"
+            onClick={() => run(name)}
+            className="btn shrink-0"
+          >
             {name}
           </button>
         ))}
       </nav>
 
-      <div ref={scrollRef} onClick={onAreaClick} className="relative min-h-0 flex-1 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        onClick={onAreaClick}
+        className="relative min-h-0 flex-1 overflow-y-auto"
+      >
         <div className="mx-auto w-full max-w-4xl px-4 py-6">
           {showBoot && (
             <Boot
               profile={profile}
-              counts={{ projects: projects.length, skills: skills.length, faqs: faqs.length }}
+              counts={{
+                projects: projects.length,
+                skills: skills.length,
+                faqs: faqs.length,
+              }}
             />
           )}
 
@@ -245,9 +290,17 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
           {/* Prompt ativo: o <input> real fica invisível por cima; desenhamos texto e cursor de bloco. */}
           <div className="relative mt-6 break-words">
             <PromptLabel />{" "}
-            <span className="whitespace-pre-wrap break-all">{value.slice(0, cursor)}</span>
-            <span className="term-cursor" data-focused={focused} aria-hidden="true" />
-            <span className="whitespace-pre-wrap break-all">{value.slice(cursor)}</span>
+            <span className="whitespace-pre-wrap break-all">
+              {value.slice(0, cursor)}
+            </span>
+            <span
+              className="term-cursor"
+              data-focused={focused}
+              aria-hidden="true"
+            />
+            <span className="whitespace-pre-wrap break-all">
+              {value.slice(cursor)}
+            </span>
             <input
               ref={inputRef}
               value={value}
