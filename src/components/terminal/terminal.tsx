@@ -67,10 +67,7 @@ function triggerDownload(url: string) {
 }
 
 export function Terminal({ profile, skills, projects, faqs }: Props) {
-  const [entries, setEntries] = useState<Entry[]>([
-    { id: -2, input: "about", kind: "about" },
-    { id: -1, input: "projects", kind: "projects" },
-  ]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [showBoot, setShowBoot] = useState(true);
   const [value, setValue] = useState("");
   const [cursor, setCursor] = useState(0);
