@@ -156,13 +156,6 @@ npm run db:studio    # interface visual do banco
 
 Sugestões e correções são bem-vindas. Abra uma [issue](../../issues) para conversar antes de enviar um pull request.
 
-## 📬 Contato
-
-- 🌐 Portfólio: [SEU-SITE.vercel.app](https://SEU-SITE.vercel.app)
-- 💼 LinkedIn: [linkedin.com/in/SEU-USUARIO](https://www.linkedin.com/in/SEU-USUARIO)
-- ✉️ E-mail: seu@email.com
-
----
 
 <div align="center">
 
