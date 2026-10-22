@@ -3,6 +3,7 @@ import { JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import { getProfile } from "@/db/queries";
 import { siteUrl } from "@/lib/site";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const mono = JetBrains_Mono({
@@ -45,6 +46,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={mono.variable}>
+      <Analytics />
       <body>{children}</body>
     </html>
   );
