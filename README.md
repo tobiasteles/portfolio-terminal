@@ -1,87 +1,164 @@
-# Portfólio em Terminal
+<div align="center">
 
-Portfólio interativo no estilo CLI com painel admin.
-Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 3 · Drizzle ORM · Neon (Postgres serverless).
+# 💻 Portfólio em Terminal
 
-## Rodando localmente
+**Um portfólio interativo no estilo CLI: digite comandos para conhecer meus projetos, skills e currículo.**
 
-1. Instale as dependências (Node 20+):
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-C5F74F?logo=drizzle&logoColor=black)](https://orm.drizzle.team)
+[![Neon](https://img.shields.io/badge/Neon-Postgres-00E599?logo=postgresql&logoColor=white)](https://neon.tech)
 
-   ```bash
-   npm install
-   ```
+[**🔗 Ver ao vivo**](https://SEU-SITE.vercel.app) · [Reportar um bug](../../issues) · [Sugerir uma ideia](../../issues)
 
-2. Crie o banco no [Neon](https://neon.tech), copie a connection string e configure o ambiente:
+<!-- Troque pelo print ou GIF do seu site. Dica: grave um GIF curto digitando "projects" e "skills". -->
+<img src="docs/preview.gif" alt="Demonstração do portfólio em terminal" width="720" />
 
-   ```bash
-   cp .env.example .env.local
-   # edite DATABASE_URL, AUTH_SECRET, ADMIN_EMAIL e ADMIN_PASSWORD
-   # gerar segredo: openssl rand -base64 32
-   ```
+</div>
 
-3. Crie as tabelas no Neon:
+---
 
-   ```bash
-   npx drizzle-kit push
-   ```
+## ✨ Por que um terminal?
 
-4. Crie o usuário admin e o conteúdo de exemplo (opcional, mas recomendado):
+Portfólios costumam ser todos parecidos. Este aqui troca o menu por um **prompt de comando**: o visitante digita `projects`, `skills` ou `resume` e o site responde como um terminal de verdade. Por trás, é uma aplicação full stack completa, com banco de dados, autenticação e painel administrativo para editar tudo sem mexer no código.
 
-   ```bash
-   npm run db:seed
-   ```
+## 🚀 Funcionalidades
 
-5. Inicie:
+**Para quem visita**
+- Terminal interativo com **autocompletar (Tab)**, **histórico (↑/↓)** e **Ctrl+L** para limpar a tela
+- Aliases em português: `projetos`, `tecnologias`, `curriculo`, `contato`, `sobre`
+- Retrato em **ASCII art** gerado a partir da minha foto
+- Formulário de contato direto no terminal
+- Download do currículo em PDF
+- Imagens de compartilhamento (Open Graph/Twitter), `sitemap` e `robots` gerados automaticamente
 
-   ```bash
-   npm run dev
-   ```
+**Para quem administra (`/admin`)**
+- Edição de perfil, skills, projetos e FAQ pela interface, sem precisar mexer no código
+- Caixa de entrada com as mensagens do formulário de contato
+- Conversor de foto para ASCII com prévia ao vivo (largura, zoom, contraste, brilho e estilo dos símbolos). A conversão roda no navegador e só o texto é salvo
+- Avisos de novas mensagens por **e-mail (Resend)** e **WhatsApp (CallMeBot)**, ambos opcionais
 
-   - Site: <http://localhost:3000>
-   - Admin: <http://localhost:3000/admin> (use o e-mail e a senha do `.env.local`)
+## ⌨️ Comandos do terminal
 
-6. Troque `public/curriculo.pdf` pelo seu PDF (ou aponte outro link em `/admin/profile`).
+| Comando    | O que faz                                  |
+| ---------- | ------------------------------------------ |
+| `help`     | Lista os comandos disponíveis              |
+| `about`    | Quem sou eu                                |
+| `skills`   | Tecnologias que domino, por categoria      |
+| `projects` | Projetos que criei                         |
+| `resume`   | Baixa o currículo em PDF                   |
+| `faq`      | Perguntas frequentes                       |
+| `contact`  | Envia uma mensagem para mim                |
+| `links`    | GitHub, LinkedIn e e-mail                  |
+| `clear`    | Limpa a tela                               |
 
-## Migrações versionadas (alternativa ao `push`)
+## 🛠️ Stack
 
-```bash
-npm run db:generate   # gera SQL em ./drizzle
-npm run db:migrate    # aplica no Neon
-npm run db:studio     # interface visual do Drizzle
+| Camada          | Tecnologias                                                |
+| --------------- | ---------------------------------------------------------- |
+| Framework       | Next.js 15 (App Router, Server Actions) e React 19         |
+| Linguagem       | TypeScript                                                 |
+| Estilo          | Tailwind CSS 3 e fonte JetBrains Mono                      |
+| Banco de dados  | PostgreSQL serverless no [Neon](https://neon.tech)         |
+| ORM             | Drizzle ORM e Drizzle Kit                                  |
+| Autenticação    | JWT (HS256) com `jose` e senhas com `bcryptjs`             |
+| Validação       | Zod                                                        |
+| Deploy          | Vercel                                                     |
+
+## 🔒 Segurança
+
+- Sessão por **JWT em cookie `httpOnly`**, validado no `middleware` e de novo em cada página e Server Action do admin
+- Senhas armazenadas com **bcrypt**
+- URLs salvas pelo admin aceitam apenas `http(s)` (ou caminho local, no caso do currículo)
+- Formulário de contato com **validação Zod** e campo **honeypot** contra bots
+- Cabeçalhos de segurança (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`)
+
+## 📁 Estrutura
+
+```
+├── scripts/seed.ts          # cria o admin e o conteúdo de exemplo
+├── public/curriculo.pdf     # currículo para download
+└── src/
+    ├── app/
+    │   ├── admin/           # painel administrativo (login, perfil, skills, projetos, FAQ, mensagens)
+    │   ├── actions/         # Server Actions públicas (contato)
+    │   └── api/health/      # healthcheck
+    ├── components/
+    │   ├── terminal/        # o terminal: comandos, saídas, boot, formulário
+    │   └── admin/           # formulários e editor de foto ASCII
+    ├── db/                  # schema Drizzle e queries
+    └── lib/                 # auth, JWT, ASCII, validadores, notificações
 ```
 
-## Deploy (Vercel)
+## 🧪 Rodando localmente
 
-Cadastre `DATABASE_URL` e `AUTH_SECRET` nas variáveis de ambiente do projeto.
-Rode `npx drizzle-kit push` e `npm run db:seed` uma vez apontando para o banco de produção.
+**Pré-requisitos:** Node.js 20+ e uma conta gratuita no [Neon](https://neon.tech).
 
-## Foto de perfil em ASCII
+```bash
+# 1. Clone e instale
+git clone https://github.com/SEU-USUARIO/portfolio-terminal.git
+cd portfolio-terminal
+npm install
 
-Em `/admin/profile` você informa uma URL ou envia uma imagem. A conversão acontece no seu navegador, com prévia ao vivo
-(largura, zoom, contraste, brilho, estilo dos símbolos e inversão). Só o texto ASCII é salvo no banco; o arquivo enviado não é armazenado.
-O retrato aparece ao lado dos seus dados nos comandos `about` e `whoami`.
+# 2. Configure o ambiente
+cp .env.example .env.local
+# edite DATABASE_URL, AUTH_SECRET, ADMIN_EMAIL e ADMIN_PASSWORD
+# para gerar o segredo: openssl rand -base64 32
 
-- Pela URL, o site de origem precisa permitir uso em canvas (CORS). Avatares do GitHub (`https://github.com/usuario.png`) costumam funcionar; se der erro, baixe a foto e use o upload.
-- Se você já tinha rodado o projeto antes desta versão, execute `npx drizzle-kit push` de novo para criar as colunas `photo_url` e `photo_ascii`.
+# 3. Crie as tabelas e o conteúdo de exemplo
+npx drizzle-kit push
+npm run db:seed
 
-## Avisos de novas mensagens (opcional)
+# 4. Inicie
+npm run dev
+```
 
-Quando alguém envia o formulário, a mensagem é salva no banco e, se configurado, você recebe um aviso:
+- Site: <http://localhost:3000>
+- Admin: <http://localhost:3000/admin> (use o e-mail e a senha do `.env.local`)
 
-- **E-mail (Resend):** crie uma conta em resend.com, gere uma API key e preencha `RESEND_API_KEY` e `NOTIFY_EMAIL_TO`. O Reply-To já aponta para o visitante.
-- **WhatsApp (CallMeBot):** ative o serviço seguindo as instruções em callmebot.com, que devolvem uma apikey no seu WhatsApp. Depois preencha `CALLMEBOT_PHONE` e `CALLMEBOT_APIKEY`.
+Depois de entrar no admin, personalize seu perfil, skills e projetos. Para trocar o currículo, substitua `public/curriculo.pdf` ou aponte outro link em `/admin/profile`.
 
-Os dois canais são independentes e falhas de envio só aparecem nos logs do servidor; a mensagem continua salva e visível em `/admin/messages`.
+### Variáveis de ambiente
 
-## Segurança
+| Variável                              | Obrigatória | Descrição                                          |
+| ------------------------------------- | :---------: | -------------------------------------------------- |
+| `DATABASE_URL`                        |     ✅      | Connection string do Neon                          |
+| `AUTH_SECRET`                         |     ✅      | Segredo para assinar o JWT                         |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD`      |     ✅      | Credenciais do primeiro admin (usadas pelo seed)   |
+| `NEXT_PUBLIC_SITE_URL`                |  Produção   | URL pública do site                                |
+| `RESEND_API_KEY` / `NOTIFY_EMAIL_TO`  |     ❌      | Aviso de novas mensagens por e-mail                |
+| `CALLMEBOT_PHONE` / `CALLMEBOT_APIKEY`|     ❌      | Aviso de novas mensagens por WhatsApp              |
 
-- Sessão via JWT (HS256) em cookie `httpOnly`, validado no `middleware.ts` e de novo em cada página e Server Action do admin.
-- Senhas com bcrypt. URLs salvas pelo admin só aceitam `http(s)` (ou caminho local no currículo).
-- Formulário de contato com validação Zod e campo honeypot. Para produção com tráfego real, adicione rate limit (ex.: Upstash Ratelimit).
-- No Next 16, renomeie `src/middleware.ts` para `src/proxy.ts` e a função exportada para `proxy`.
+### Scripts úteis
 
-## Comandos do terminal
+```bash
+npm run dev          # servidor de desenvolvimento
+npm run build        # build de produção
+npm run typecheck    # checagem de tipos
+npm run db:generate  # gera migrações SQL
+npm run db:migrate   # aplica migrações
+npm run db:studio    # interface visual do banco
+```
 
-`help`, `about`, `skills`, `projects`, `resume`, `faq`, `contact`, `links`, `clear`
-(aliases em português: `projetos`, `tecnologias`, `curriculo`, `contato`, `sobre`).
-Tab completa, ↑/↓ percorrem o histórico, Ctrl+L limpa a tela.
+## ☁️ Deploy na Vercel
+
+1. Importe o repositório na [Vercel](https://vercel.com).
+2. Cadastre `DATABASE_URL` e `AUTH_SECRET` nas variáveis de ambiente do projeto.
+3. Rode `npx drizzle-kit push` e `npm run db:seed` uma vez apontando para o banco de produção.
+
+## 🗺️ Próximos passos
+
+- [ ] Rate limit no formulário de contato (ex.: Upstash Ratelimit)
+- [ ] Migrar `middleware.ts` para `proxy.ts` ao atualizar para o Next 16
+
+## 🤝 Contribuindo
+
+Sugestões e correções são bem-vindas. Abra uma [issue](../../issues) para conversar antes de enviar um pull request.
+
+
+<div align="center">
+
+Se este projeto te ajudou ou inspirou, deixe uma ⭐ no repositório!
+
+</div>
