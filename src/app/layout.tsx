@@ -47,6 +47,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={mono.variable}>
       <body>
+        <meta
+          name="google-site-verification"
+          content="y7RQtPLXC_JTNSAq20ntAgbCj2EDqMQyM0KEJXl-iPI"
+        />
         <Analytics />
         {children}
       </body>
