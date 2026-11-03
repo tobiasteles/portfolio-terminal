@@ -1,7 +1,9 @@
 // Seguro para o runtime Edge (usado pelo middleware): não importa next/headers.
 import { jwtVerify, SignJWT } from "jose";
 
-export const COOKIE_NAME = "admin_session";
+// "__Host-" impede o cookie de ser definido por subdomínios (exige Secure e path=/).
+export const COOKIE_NAME =
+  process.env.NODE_ENV === "production" ? "__Host-admin_session" : "admin_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 dias
 
 export type SessionPayload = { userId: number; email: string };

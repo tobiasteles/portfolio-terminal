@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useEffect, type ReactNode } from "react";
+import { track } from "@vercel/analytics";
 import { sendMessage, type ContactState } from "@/app/actions/contact";
 
 const initialState: ContactState = { status: "idle" };
@@ -24,10 +25,14 @@ function Row({ label, error, children }: { label: string; error?: string; childr
 export function ContactForm() {
   const [state, action, pending] = useActionState(sendMessage, initialState);
 
+  useEffect(() => {
+    if (state.status === "success") track("contato_enviado");
+  }, [state.status]);
+
   if (state.status === "success") {
     return (
       <p role="status" className="text-term-neon">
-        [ ok ] mensagem enviada. Respondo assim que possível.
+        Mensagem enviada. Obrigado pelo contato! Respondo assim que possível.
       </p>
     );
   }
@@ -66,9 +71,14 @@ export function ContactForm() {
         </p>
       )}
 
-      <button type="submit" disabled={pending} className="btn btn-primary">
-        {pending ? "enviando..." : "enviar mensagem"}
+      <button type="submit" disabled={pending} aria-busy={pending} className="btn btn-primary min-h-10">
+        {pending ? "enviando, aguarde..." : "enviar mensagem"}
       </button>
+      {pending && (
+        <p role="status" className="text-sm text-term-dim">
+          Enviando sua mensagem. Não feche esta página.
+        </p>
+      )}
     </form>
   );
 }

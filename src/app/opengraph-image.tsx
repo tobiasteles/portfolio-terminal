@@ -12,12 +12,12 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const C = {
-  bg: "#040805",
-  line: "#14301a",
-  fg: "#cdf5d3",
-  dim: "#6b9275",
-  neon: "#3dff8b",
-  amber: "#ffc24b",
+  bg: "#0c0c0c",
+  line: "#3a3a3a",
+  fg: "#cccccc",
+  dim: "#767676",
+  neon: "#cccccc",
+  amber: "#f9f1a5",
 };
 
 // Fonte opcional. Sem o arquivo, a imagem sai com a fonte padrão e sem o retrato ASCII
@@ -52,7 +52,7 @@ export default async function OpenGraphImage() {
           display: "flex",
           padding: 36,
           background: C.bg,
-          backgroundImage: `radial-gradient(circle at 15% 10%, #0d2a15 0%, ${C.bg} 55%)`,
+          backgroundImage: `radial-gradient(circle at 15% 10%, #1f1f1f 0%, ${C.bg} 55%)`,
           fontFamily: font ? "JetBrains Mono" : undefined,
           fontWeight: 700,
         }}
@@ -68,10 +68,7 @@ export default async function OpenGraphImage() {
         >
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div style={{ display: "flex", fontSize: 28, color: C.dim }}>
-              <span style={{ color: C.amber }}>visitante</span>
-              <span>@</span>
-              <span style={{ color: C.neon }}>portfolio</span>
-              <span>:~$ whoami</span>
+              <span>{"C:\\Users\\visitante> whoami"}</span>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -81,7 +78,7 @@ export default async function OpenGraphImage() {
                   fontSize: nameSize,
                   lineHeight: 1.05,
                   color: C.neon,
-                  textShadow: "0 0 28px rgba(61,255,139,0.45)",
+                  
                 }}
               >
                 {profile.name}

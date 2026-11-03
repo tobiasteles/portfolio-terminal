@@ -4,34 +4,27 @@ import { AsciiPortrait } from "@/components/ascii-portrait";
 
 type Props = {
   profile: Profile;
-  counts: { projects: number; skills: number; faqs: number };
 };
 
 const step = (i: number) => ({ "--i": i }) as CSSProperties;
 
-export function Boot({ profile, counts }: Props) {
-  const lines = [
-    `iniciando portfolio v1.0`,
-    `perfil carregado: ${profile.name}`,
-    `conectado ao banco (neon postgres)`,
-    `projetos: ${counts.projects}, tecnologias: ${counts.skills}, faq: ${counts.faqs}`,
-  ];
+export function Boot({ profile }: Props) {
+  const year = new Date().getFullYear();
 
   return (
     <header>
-      <ul className="space-y-0.5 text-sm text-term-dim">
-        {lines.map((line, i) => (
-          <li key={line} className="boot-line" style={step(i)}>
-            <span className="text-term-dim">[ </span>
-            <span className="text-term-neon">ok</span>
-            <span className="text-term-dim"> ]</span> {line}
-          </li>
-        ))}
-      </ul>
+      <div className="text-term-fg">
+        <p className="boot-line" style={step(0)}>
+          Portfólio de {profile.name} [versão 1.0.0]
+        </p>
+        <p className="boot-line" style={step(1)}>
+          (c) {year} {profile.name}. Todos os direitos reservados.
+        </p>
+      </div>
 
       <div
         className="boot-line mt-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8"
-        style={step(lines.length + 1)}
+        style={step(3)}
       >
         {profile.photoAscii && (
           <AsciiPortrait
@@ -41,13 +34,13 @@ export function Boot({ profile, counts }: Props) {
           />
         )}
         <div className="min-w-0">
-          <h1 className="glow text-3xl font-bold leading-tight text-term-neon sm:text-5xl">
+          <h1 className="text-3xl font-bold leading-tight text-term-fg sm:text-5xl">
             {profile.name}
           </h1>
-          <p className="mt-2 text-lg text-term-fg">{profile.headline}</p>
+          <p className="mt-2 text-lg text-term-neon">{profile.headline}</p>
           <p className="mt-4 text-term-dim">
-            Digite <span className="text-term-neon">help</span> ou use os
-            atalhos acima.
+            Digite <span className="text-term-fg">help</span> ou toque nos atalhos
+            acima.
           </p>
         </div>
       </div>

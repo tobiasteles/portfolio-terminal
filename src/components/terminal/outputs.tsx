@@ -248,8 +248,8 @@ export function ContactOutput() {
 
 export function UnknownOutput({ command, onRun }: { command: string } & RunProps) {
   return (
-    <p className="text-term-danger">
-      comando não encontrado: <span className="text-term-fg">{command}</span>. Digite{" "}
+    <p className="max-w-[72ch]">
+      &apos;{command}&apos; não é reconhecido como um comando interno ou externo. Digite{" "}
       <CmdButton name="help" onRun={onRun} /> para ver a lista.
     </p>
   );

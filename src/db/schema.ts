@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   pgTable,
   serial,
@@ -71,6 +72,17 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Tentativas recentes (login e contato), usadas para limitar abusos. Linhas com mais de 24h são apagadas. */
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    id: serial("id").primaryKey(),
+    key: varchar("key", { length: 200 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("rate_limits_key_created_idx").on(t.key, t.createdAt)],
+);
 
 export type Profile = typeof profile.$inferSelect;
 export type Skill = typeof skills.$inferSelect;

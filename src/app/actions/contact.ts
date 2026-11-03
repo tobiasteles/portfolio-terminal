@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { messages } from "@/db/schema";
 import { notifyNewMessage } from "@/lib/notify";
+import { clientIp, isLimited, recordHit } from "@/lib/rate-limit";
 
 export type ContactState = {
   status: "idle" | "success" | "error";
@@ -52,6 +53,21 @@ export async function sendMessage(_prev: ContactState, formData: FormData): Prom
       },
       values,
     };
+  }
+
+  // Limite: 5 mensagens por hora por IP.
+  try {
+    const key = `contact:${await clientIp()}`;
+    if (await isLimited(key, 5, 3600)) {
+      return {
+        status: "error",
+        message: "Muitas mensagens em pouco tempo. Tente de novo mais tarde ou escreva direto para o meu e-mail.",
+        values,
+      };
+    }
+    await recordHit(key);
+  } catch (error) {
+    console.error("Falha no controle de limite:", error); // não bloqueia o visitante
   }
 
   try {

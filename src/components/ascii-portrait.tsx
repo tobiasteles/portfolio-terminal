@@ -14,7 +14,7 @@ export function AsciiPortrait({ art, label, animate = false, className = "" }: P
     <figure role="img" aria-label={label} className={`m-0 ${className}`}>
       <pre
         aria-hidden="true"
-        className="glow-soft m-0 font-mono text-[7px] leading-none text-term-neon sm:text-[8px]"
+        className="m-0 font-mono text-[7px] leading-none text-term-fg sm:text-[8px]"
         style={{ WebkitTextSizeAdjust: "100%" }}
       >
         {rows.map((row, i) => (

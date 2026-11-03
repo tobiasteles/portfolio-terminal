@@ -14,7 +14,10 @@ export async function middleware(req: NextRequest) {
   if (session && isLogin) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("Cache-Control", "no-store");
+  res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return res;
 }
 
 export const config = { matcher: ["/admin/:path*"] };

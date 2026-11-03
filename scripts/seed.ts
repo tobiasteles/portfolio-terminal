@@ -18,7 +18,7 @@ async function main() {
   const { DATABASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
   if (!DATABASE_URL) throw new Error("DATABASE_URL não definida.");
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) throw new Error("Defina ADMIN_EMAIL e ADMIN_PASSWORD.");
-  if (ADMIN_PASSWORD.length < 8) throw new Error("ADMIN_PASSWORD precisa ter 8+ caracteres.");
+  if (ADMIN_PASSWORD.length < 12) throw new Error("ADMIN_PASSWORD precisa ter 12+ caracteres.");
 
   const db = drizzle(neon(DATABASE_URL), { schema });
 

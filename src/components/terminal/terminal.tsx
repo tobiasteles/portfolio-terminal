@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { Faq, Profile, Project, Skill } from "@/db/schema";
 import { Boot } from "./boot";
+import { WindowChrome } from "./window-chrome";
 import {
   COMMANDS,
   QUICK_COMMANDS,
@@ -45,14 +46,7 @@ type Entry = {
 const MAX_ENTRIES = 50;
 
 function PromptLabel() {
-  return (
-    <span className="whitespace-nowrap">
-      <span className="text-term-amber">visitante</span>
-      <span className="text-term-dim">@</span>
-      <span className="text-term-neon">portfolio</span>
-      <span className="text-term-dim">:~$</span>
-    </span>
-  );
+  return <span className="whitespace-nowrap">{"C:\\Users\\visitante>"}</span>;
 }
 
 function triggerDownload(url: string) {
@@ -233,27 +227,27 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
       className="flex min-h-0 flex-1 flex-col"
       aria-label="Terminal interativo"
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-term-line bg-term-panel px-4 py-2 text-xs text-term-dim">
-        <span>visitante@portfolio: ~</span>
-        <span className="hidden sm:inline">
-          Tab completa · ↑↓ histórico · Ctrl+L limpa
-        </span>
-      </div>
+      <WindowChrome />
 
       <nav
         aria-label="Atalhos de comandos"
-        className="flex shrink-0 gap-2 overflow-x-auto border-b border-term-line px-4 py-2"
+        className="quick-nav flex shrink-0 gap-2 overflow-x-auto bg-term-bg px-3 py-2 sm:px-4"
       >
         {QUICK_COMMANDS.map((name) => (
           <button
             key={name}
             type="button"
             onClick={() => run(name)}
-            className="btn shrink-0"
+            className={`btn min-h-10 shrink-0 snap-start px-4 ${
+              name === "contact" ? "btn-primary" : ""
+            }`}
           >
             {name}
           </button>
         ))}
+        <span className="hidden shrink-0 items-center pl-2 text-xs text-term-dim lg:flex">
+          Tab completa · ↑↓ histórico · Ctrl+L limpa
+        </span>
       </nav>
 
       <div
@@ -261,16 +255,9 @@ export function Terminal({ profile, skills, projects, faqs }: Props) {
         onClick={onAreaClick}
         className="relative min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-4xl px-4 py-6">
+        <div className="mx-auto w-full max-w-4xl px-3 py-4 sm:px-4 sm:py-6">
           {showBoot && (
-            <Boot
-              profile={profile}
-              counts={{
-                projects: projects.length,
-                skills: skills.length,
-                faqs: faqs.length,
-              }}
-            />
+            <Boot profile={profile} />
           )}
 
           <div aria-live="polite">
