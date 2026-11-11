@@ -1,5 +1,6 @@
 import type { Project } from "@/db/schema";
 import { Field, TextArea } from "./fields";
+import { ImageUploadField } from "./image-upload-field";
 import { SubmitButton } from "./submit-button";
 
 export function ProjectForm({
@@ -22,13 +23,11 @@ export function ProjectForm({
         maxLength={600}
         rows={3}
       />
-      <Field
-        label="imagem (URL)"
+      <ImageUploadField
+        label="imagem do projeto"
         name="imageUrl"
-        type="url"
         defaultValue={project?.imageUrl}
-        placeholder="https://..."
-        hint="Link direto para uma imagem hospedada (Vercel Blob, Cloudinary, GitHub raw etc.)."
+        hint="Aparece ao lado da descrição e no planeta do projeto. Envie um arquivo (fica salvo no banco) ou cole um link direto."
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="link da aplicação (live demo)" name="liveUrl" type="url" defaultValue={project?.liveUrl} placeholder="https://..." />

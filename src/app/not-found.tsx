@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { WindowChrome } from "@/components/terminal/window-chrome";
+import { ds } from "@/components/universo/ds";
 
 export const metadata: Metadata = {
   title: "Página não encontrada",
@@ -9,18 +9,18 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <WindowChrome />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
-        <p>{"C:\\Users\\visitante>"} cd pagina-que-voce-procurou</p>
-        <p className="mt-1">O sistema não pode encontrar o caminho especificado.</p>
-        <p className="mt-1 text-term-dim">Erro 404</p>
-        <p className="mt-6">
-          <Link href="/" className="btn btn-primary no-underline">
-            cd \ (voltar ao início)
-          </Link>
+    <main className="grid min-h-dvh place-items-center bg-bh-void px-6 font-display text-bh-text">
+      <div className="text-center">
+        <p className={ds.eyebrow}>{"// erro 404"}</p>
+        <h1 className="mt-2 text-4xl font-semibold text-bh-flare sm:text-5xl">Além do horizonte de eventos</h1>
+        <p className="mx-auto mt-3 max-w-md text-bh-mute">
+          Essa página não existe, ou foi engolida por um buraco negro. Daqui não volta nem a luz, mas o botão abaixo
+          leva você de volta.
         </p>
-      </main>
-    </div>
+        <Link href="/" className={`mt-6 ${ds.btnPrimary}`}>
+          Voltar ao início
+        </Link>
+      </div>
+    </main>
   );
 }

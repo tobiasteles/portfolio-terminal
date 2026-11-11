@@ -6,12 +6,12 @@ import { z } from "zod";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import { optionalHttpUrl, parseTags } from "@/lib/validators";
+import { optionalHttpUrl, optionalImageSource, parseTags } from "@/lib/validators";
 
 const schema = z.object({
   title: z.string().trim().min(1).max(160),
   description: z.string().trim().min(1).max(600),
-  imageUrl: optionalHttpUrl,
+  imageUrl: optionalImageSource,
   liveUrl: optionalHttpUrl,
   githubUrl: optionalHttpUrl,
   technologies: z.string().default("").transform(parseTags),

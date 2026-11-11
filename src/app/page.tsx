@@ -1,23 +1,43 @@
 import { getFaqs, getProfile, getProjects, getSkills } from "@/db/queries";
-import { StatusBar } from "@/components/terminal/status-bar";
-import { Terminal } from "@/components/terminal/terminal";
+import { UniversoHome } from "@/components/universo/universo-home";
+import { publicImageSrc } from "@/lib/image-data";
+import type { OrbitProject } from "@/lib/orbit";
+import { TIMELINE } from "@/lib/timeline";
 
 // Os dados vêm do banco; o admin chama revalidatePath("/") ao salvar.
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [profile, skills, projects, faqs] = await Promise.all([
+  const [profile, skills, rows, faqs] = await Promise.all([
     getProfile(),
     getSkills(),
     getProjects(),
     getFaqs(),
   ]);
 
-  return (
-    <main className="flex h-dvh flex-col">
-      <Terminal profile={profile} skills={skills} projects={projects} faqs={faqs} />
+  const projects: OrbitProject[] = rows.map((p) => ({
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    // imagens enviadas pelo admin saem por /imagem/projeto/ID (endereço curto), não dentro do HTML
+    imageUrl: publicImageSrc(p.imageUrl, `/imagem/projeto/${p.id}`),
+    liveUrl: p.liveUrl,
+    githubUrl: p.githubUrl,
+    technologies: p.technologies,
+  }));
 
-      {/* Os buscadores não digitam comandos: este resumo expõe o mesmo conteúdo em HTML. */}
+  return (
+    <main>
+      <UniversoHome
+        profile={{ ...profile, photoUrl: publicImageSrc(profile.photoUrl, "/foto") }}
+        skills={skills}
+        faqs={faqs}
+        projects={projects}
+        timeline={TIMELINE}
+        year={new Date().getFullYear()}
+      />
+
+      {/* Buscadores e leitores de tela não enxergam o 3D: este resumo expõe o mesmo conteúdo em HTML. */}
       <aside className="sr-only" aria-label="Resumo do portfólio">
         <h2>Sobre {profile.name}</h2>
         <p>{profile.headline}</p>
@@ -46,6 +66,14 @@ export default async function HomePage() {
             </ul>
           </>
         )}
+        <h2>Trajetória</h2>
+        <ul>
+          {TIMELINE.map((t) => (
+            <li key={t.id}>
+              {t.title}, {t.place} ({t.period})
+            </li>
+          ))}
+        </ul>
         {faqs.length > 0 && (
           <>
             <h2>Perguntas frequentes</h2>
@@ -60,7 +88,6 @@ export default async function HomePage() {
           </>
         )}
       </aside>
-      <StatusBar profile={profile} year={new Date().getFullYear()} />
     </main>
   );
 }

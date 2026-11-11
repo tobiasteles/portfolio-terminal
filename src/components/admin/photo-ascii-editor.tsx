@@ -4,6 +4,7 @@ import { useEffect, useState, type KeyboardEvent } from "react";
 import { AsciiPortrait } from "@/components/ascii-portrait";
 import { DEFAULT_OPTIONS, RAMP_LABELS, type AsciiOptions, type RampName } from "@/lib/ascii";
 import { canvasToAscii, loadCanvasFromFile, loadCanvasFromUrl } from "@/lib/ascii-browser";
+import { canvasToJpegDataUrl } from "@/lib/image-resize";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -61,7 +62,7 @@ export function PhotoAsciiEditor({
   initialUrl: string | null;
 }) {
   const [ascii, setAscii] = useState(initialAscii ?? "");
-  const [url, setUrl] = useState(initialUrl ?? "");
+  const [url, setUrl] = useState(initialUrl?.startsWith("data:") ? "" : (initialUrl ?? ""));
   const [savedUrl, setSavedUrl] = useState(initialUrl ?? "");
   const [opts, setOpts] = useState<AsciiOptions>(DEFAULT_OPTIONS);
   const [source, setSource] = useState<HTMLCanvasElement | null>(null);
@@ -92,8 +93,10 @@ export function PhotoAsciiEditor({
     }
     setStatus({ kind: "loading", message: "Lendo imagem..." });
     try {
-      setSource(await loadCanvasFromFile(file));
-      setSavedUrl(""); // upload não tem URL de origem
+      const canvas = await loadCanvasFromFile(file);
+      setSource(canvas);
+      // A foto enviada também vira a foto de verdade do site (reduzida e guardada no banco).
+      setSavedUrl(canvasToJpegDataUrl(canvas, 800));
       setStatus({ kind: "ok", message: "Imagem carregada. Ajuste e salve o perfil." });
     } catch (e) {
       setStatus({ kind: "error", message: (e as Error).message });
@@ -141,7 +144,7 @@ export function PhotoAsciiEditor({
 
   return (
     <fieldset className="grid gap-4 border border-term-line p-4">
-      <legend className="px-2 text-term-amber">foto de perfil (arte ASCII)</legend>
+      <legend className="px-2 text-term-amber">foto de perfil</legend>
 
       <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
         <div className="min-h-40 overflow-x-auto border border-term-line bg-term-bg p-3">
@@ -149,6 +152,13 @@ export function PhotoAsciiEditor({
             <AsciiPortrait art={ascii} label="Prévia do retrato em ASCII" />
           ) : (
             <p className="text-sm text-term-dim">Nenhuma foto definida.</p>
+          )}
+          {savedUrl && (
+            <div className="mt-3 grid gap-1">
+              <span className="text-xs text-term-dim">foto exibida na seção Sobre:</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={savedUrl} alt="Prévia da foto" className="h-28 w-28 rounded-full border border-term-line object-cover" />
+            </div>
           )}
         </div>
 
@@ -175,7 +185,7 @@ export function PhotoAsciiEditor({
 
           <div className="grid gap-1">
             <label htmlFor="photo-file" className="text-sm text-term-dim">
-              ou envie um arquivo (PNG, JPG, WebP; até 10 MB)
+              ou envie um arquivo (PNG, JPG, WebP; até 10 MB). Ele vira a foto do site
             </label>
             <input
               id="photo-file"

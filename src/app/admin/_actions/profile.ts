@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { profile } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { isValidAsciiArt } from "@/lib/ascii";
-import { emptyToNull, optionalHttpUrl, optionalResumeLink } from "@/lib/validators";
+import { emptyToNull, optionalHttpUrl, optionalImageSource, optionalResumeLink } from "@/lib/validators";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -17,7 +17,7 @@ const schema = z.object({
   resumeUrl: optionalResumeLink,
   githubUrl: optionalHttpUrl,
   linkedinUrl: optionalHttpUrl,
-  photoUrl: optionalHttpUrl,
+  photoUrl: optionalImageSource,
   // Formulários normalizam quebras de linha para CRLF: voltamos para LF antes de validar.
   photoAscii: z.preprocess(
     (v) => {

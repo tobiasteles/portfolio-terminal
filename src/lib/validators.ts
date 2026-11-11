@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isImageDataUrl } from "./image-data";
 
 export function isHttpUrl(value: string) {
   try {
@@ -24,6 +25,17 @@ const httpUrl = z
   .refine(isHttpUrl, "URL inválida (use http:// ou https://)");
 
 export const optionalHttpUrl = emptyToNull(httpUrl);
+
+/** Imagem: link http(s) OU arquivo enviado pelo admin (data URL jpeg/png/webp de até ~300 KB). */
+export const optionalImageSource = emptyToNull(
+  z
+    .string()
+    .trim()
+    .refine(
+      (v) => (isHttpUrl(v) ? v.length <= 500 : isImageDataUrl(v)),
+      "Imagem inválida: use um link https:// ou envie um arquivo (JPG, PNG ou WebP).",
+    ),
+);
 
 /** Currículo: URL http(s) ou caminho local (ex.: /curriculo.pdf em public/). */
 export const optionalResumeLink = emptyToNull(

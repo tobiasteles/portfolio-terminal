@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useState } from "react";
+import { ds } from "@/components/universo/ds";
 
 // Defina NEXT_PUBLIC_GA_ID (ex.: G-ABC123XYZ). Sem ele, nada é carregado e nenhum aviso aparece.
 const RAW_ID = process.env.NEXT_PUBLIC_GA_ID ?? "";
@@ -48,19 +49,19 @@ export function AnalyticsConsent() {
         <div
           role="dialog"
           aria-label="Aviso de cookies"
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-term-fg bg-term-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-bh-line bg-bh-surface/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm text-bh-text backdrop-blur-md"
         >
           <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center">
             <p className="flex-1">
               Este site usa cookies do Google Analytics para entender quantas pessoas o visitam. Só ativo
               se você aceitar. Detalhes na{" "}
-              <a href="/privacidade">política de privacidade</a>.
+              <a href="/privacidade" className="text-bh-amber">política de privacidade</a>.
             </p>
             <div className="flex gap-2">
-              <button type="button" className="btn btn-primary min-h-10 flex-1 sm:flex-none" onClick={() => save("granted")}>
+              <button type="button" className={`${ds.btnPrimary} flex-1 justify-center sm:flex-none`} onClick={() => save("granted")}>
                 aceitar
               </button>
-              <button type="button" className="btn min-h-10 flex-1 sm:flex-none" onClick={() => save("denied")}>
+              <button type="button" className={`${ds.btnGhost} flex-1 justify-center sm:flex-none`} onClick={() => save("denied")}>
                 recusar
               </button>
             </div>
@@ -76,7 +77,7 @@ export function ResetConsentButton() {
   return (
     <button
       type="button"
-      className="btn"
+      className={ds.btnGhost}
       onClick={() => {
         try {
           localStorage.removeItem(KEY);

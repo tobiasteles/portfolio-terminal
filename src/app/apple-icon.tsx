@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { BlackHoleArt } from "@/lib/og-card";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
@@ -7,21 +8,8 @@ export const contentType = "image/png";
 export default function AppleIcon() {
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#0c0c0c",
-          color: "#cccccc",
-          fontSize: 104,
-          fontWeight: 700,
-          paddingBottom: 10,
-        }}
-      >
-        {">_"}
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#040203" }}>
+        <BlackHoleArt size={168} />
       </div>
     ),
     { ...size },

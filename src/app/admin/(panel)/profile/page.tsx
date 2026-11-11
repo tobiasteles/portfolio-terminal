@@ -13,7 +13,7 @@ export default async function ProfilePage() {
     <>
       <PageHeader
         title="perfil"
-        description="Informações pessoais e foto exibidas no terminal (comandos about e whoami) e no rodapé."
+        description="Informações pessoais e foto exibidas na seção Sobre do site (a foto aparece dentro do buraco negro)."
       />
 
       <form action={saveProfile} className="card grid max-w-4xl gap-4">

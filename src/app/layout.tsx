@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import { getProfile } from "@/db/queries";
 import { siteUrl } from "@/lib/site";
@@ -10,6 +10,12 @@ import "./globals.css";
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -41,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#1f1f1f",
+  themeColor: "#040203",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -63,7 +69,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   };
 
   return (
-    <html lang="pt-BR" className={mono.variable}>
+    <html lang="pt-BR" className={`${mono.variable} ${display.variable}`}>
       <body>
         <script
           type="application/ld+json"
