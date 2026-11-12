@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
 import * as THREE from "three";
+import { KEPLER_ORBITS, keplerPeriod, keplerPosition, type KeplerOrbit } from "@/lib/kepler";
 
 /* ------------------------------------------------------------------ */
 /* Medidas da cena                                                      */
@@ -26,7 +27,7 @@ export type OrbitItem = { key: string; label: string; imageUrl: string | null };
 export type OrbitStyle = "projects" | "timeline";
 
 const STYLES = {
-  // projetos: anéis quentes, giram para um lado
+  // projetos em destaque: órbitas elípticas de Kepler (os raios daqui só valem para o tipo "circular")
   projects: { radii: [7.6, 8.6, 9.6], colors: WARM_COLORS, ring: "#ff9a4d", speed: 0.07 },
   // trajetória: anéis frios e separados, giram para o outro lado
   timeline: { radii: [7.9, 9.3], colors: COOL_COLORS, ring: "#8fb4ff", speed: -0.045 },
@@ -225,7 +226,19 @@ function BlackHoleLens({ reduced, lite }: { reduced: boolean; lite: boolean }) {
   );
 }
 
-/** Carrega a imagem do projeto como textura. Se o site da imagem não permitir (CORS), o planeta fica colorido. */
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+const easeOutBack = (t: number) => {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+};
+// Gira a esfera para o centro da imagem ficar sempre virado para a câmera.
+const FACE = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+/**
+ * Carrega a imagem do projeto como textura (ela vem do próprio site, então não há problema de CORS).
+ * A imagem é recortada em quadrado no centro só para caber no planeta; a imagem inteira aparece no cartão.
+ */
 function useImageTexture(url: string | null) {
   const [tex, setTex] = useState<THREE.Texture | null>(null);
   useEffect(() => {
@@ -246,6 +259,13 @@ function useImageTexture(url: string | null) {
         }
         t.colorSpace = THREE.SRGBColorSpace;
         t.anisotropy = 4;
+        const img = t.image as { width: number; height: number };
+        const ar = img.width / img.height;
+        // a face virada para a câmera é metade da esfera em largura: mostra o centro da imagem, sem esticar
+        const rx = ar > 1 ? 2 / ar : 2;
+        const ry = ar > 1 ? 1 : ar;
+        t.repeat.set(rx, ry);
+        t.offset.set(0.5 - rx / 2, 0.5 - ry / 2);
         loaded = t;
         setTex(t);
       },
@@ -266,7 +286,11 @@ type PlanetProps = {
   item: OrbitItem;
   index: number;
   total: number;
+  /** órbita circular (trajetória) */
   radius: number;
+  /** órbita elíptica (projetos em destaque); quando existe, manda na posição */
+  kepler?: KeplerOrbit;
+  clock: RefObject<number>;
   color: string;
   selected: boolean;
   holeRef: RefObject<THREE.Mesh | null>;
@@ -274,14 +298,48 @@ type PlanetProps = {
   hoverRef: RefObject<boolean>;
 };
 
-function Planet({ item, index, total, radius, color, selected, holeRef, onSelect, hoverRef }: PlanetProps) {
+function Planet({
+  item,
+  index,
+  total,
+  radius,
+  kepler,
+  clock,
+  color,
+  selected,
+  holeRef,
+  onSelect,
+  hoverRef,
+}: PlanetProps) {
   const angle = (index / total) * Math.PI * 2;
-  const y = Math.sin(index * 1.9) * 0.55;
+  const y = kepler ? 0 : Math.sin(index * 1.9) * 0.55;
   const tex = useImageTexture(item.imageUrl);
+  const group = useRef<THREE.Group>(null);
   const body = useRef<THREE.Mesh>(null);
+  const born = useRef(0);
+  const tmp = useMemo(() => ({ pos: { x: 0, z: 0 }, q: new THREE.Quaternion() }), []);
 
-  useFrame((_, dt) => {
-    if (body.current) body.current.rotation.y += Math.min(dt, 0.05) * 0.25;
+  useFrame(({ camera }, dt) => {
+    const d = Math.min(dt, 0.05);
+    born.current += d;
+    const g = group.current;
+    if (!g) return;
+
+    if (kepler) {
+      keplerPosition(kepler, clock.current ?? 0, tmp.pos);
+      g.position.set(tmp.pos.x, 0, tmp.pos.z);
+    }
+    // o planeta "nasce" crescendo, um depois do outro
+    g.scale.setScalar(Math.max(0.0001, easeOutBack(clamp01((born.current - index * 0.35) / 0.9))));
+
+    const m = body.current;
+    if (!m) return;
+    if (tex && m.parent) {
+      m.parent.getWorldQuaternion(tmp.q);
+      m.quaternion.copy(tmp.q).invert().multiply(camera.quaternion).multiply(FACE);
+    } else {
+      m.rotation.y += d * 0.25;
+    }
   });
 
   const enter = () => {
@@ -294,10 +352,10 @@ function Planet({ item, index, total, radius, color, selected, holeRef, onSelect
   };
 
   return (
-    <group position={[Math.cos(angle) * radius, y, Math.sin(angle) * radius]}>
+    <group ref={group} position={kepler ? [0, 0, 0] : [Math.cos(angle) * radius, y, Math.sin(angle) * radius]}>
       <mesh
         ref={body}
-        scale={selected ? 1.35 : 1}
+        scale={selected ? 1.3 : 1}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(item.key);
@@ -308,7 +366,7 @@ function Planet({ item, index, total, radius, color, selected, holeRef, onSelect
         }}
         onPointerOut={leave}
       >
-        <sphereGeometry args={[tex ? 0.46 : 0.34, 40, 40]} />
+        <sphereGeometry args={[tex ? 0.5 : 0.34, 48, 48]} />
         <meshStandardMaterial
           color={tex ? "#ffffff" : color}
           map={tex}
@@ -320,7 +378,7 @@ function Planet({ item, index, total, radius, color, selected, holeRef, onSelect
       </mesh>
       <Html
         center
-        position={[0, tex ? 0.95 : 0.85, 0]}
+        position={[0, tex ? 1.0 : 0.85, 0]}
         distanceFactor={10}
         zIndexRange={[10, 0]}
         occlude={[holeRef as RefObject<THREE.Object3D>]}
@@ -346,6 +404,77 @@ function Planet({ item, index, total, radius, color, selected, holeRef, onSelect
   );
 }
 
+/** A elipse da órbita (1ª lei de Kepler): o buraco negro fica num dos focos, na origem. */
+function EllipseRing({ orbit, color }: { orbit: KeplerOrbit; color: string }) {
+  const line = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    const b = orbit.a * Math.sqrt(1 - orbit.e * orbit.e);
+    const c = Math.cos(orbit.omega);
+    const s = Math.sin(orbit.omega);
+    for (let i = 0; i < 180; i++) {
+      const E = (i / 180) * Math.PI * 2;
+      const px = orbit.a * (Math.cos(E) - orbit.e);
+      const pz = b * Math.sin(E);
+      pts.push(new THREE.Vector3(px * c - pz * s, 0, px * s + pz * c));
+    }
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    return new THREE.LineLoop(geom, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 }));
+  }, [orbit, color]);
+  return <primitive object={line} />;
+}
+
+/**
+ * A 2ª lei de Kepler, desenhada: a área varrida pela linha buraco negro → planeta em 1/8 do período.
+ * Perto do buraco o setor fica largo e curto; longe, estreito e comprido, mas a área é sempre a mesma.
+ */
+function SweptArea({
+  orbit,
+  clock,
+  color,
+  active,
+}: {
+  orbit: KeplerOrbit;
+  clock: RefObject<number>;
+  color: string;
+  active: boolean;
+}) {
+  const N = 28;
+  const geom = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array((N + 2) * 3), 3));
+    const idx: number[] = [];
+    for (let k = 1; k <= N; k++) idx.push(0, k, k + 1);
+    g.setIndex(idx);
+    return g;
+  }, []);
+  const tmp = useMemo(() => ({ x: 0, z: 0 }), []);
+
+  useFrame(() => {
+    const arr = geom.attributes.position.array as Float32Array;
+    const span = keplerPeriod(orbit) / 8;
+    const t = clock.current ?? 0;
+    for (let k = 0; k <= N; k++) {
+      keplerPosition(orbit, t - span * (1 - k / N), tmp);
+      arr[(k + 1) * 3] = tmp.x;
+      arr[(k + 1) * 3 + 1] = 0;
+      arr[(k + 1) * 3 + 2] = tmp.z;
+    }
+    geom.attributes.position.needsUpdate = true;
+  });
+
+  return (
+    <mesh geometry={geom} frustumCulled={false}>
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={active ? 0.3 : 0.1}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
 function Orbits({
   items,
   style,
@@ -362,30 +491,51 @@ function Orbits({
   reduced: boolean;
 }) {
   const cfg = STYLES[style];
+  const isKepler = style === "projects";
   const group = useRef<THREE.Group>(null);
   const hoverRef = useRef(false);
+  const clock = useRef(0);
 
-  // Giram devagar em volta do buraco; param quando você aponta ou seleciona um.
   useFrame((_, dt) => {
+    const d = Math.min(dt, 0.05);
+    if (isKepler) {
+      // só para quando você aponta, para ficar fácil de clicar; selecionado continua andando
+      if (!reduced && !hoverRef.current) clock.current += d;
+      return;
+    }
     if (reduced || hoverRef.current || selectedKey !== null || !group.current) return;
-    group.current.rotation.y += Math.min(dt, 0.05) * cfg.speed;
+    group.current.rotation.y += d * cfg.speed;
   });
 
   return (
     <group ref={group}>
-      {cfg.radii.slice(0, Math.min(items.length, cfg.radii.length)).map((r) => (
-        <mesh key={r} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[r - 0.01, r + 0.01, 160, 1]} />
-          <meshBasicMaterial color={cfg.ring} transparent opacity={0.16} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
-      {items.map((item, i) => (
+      {isKepler
+        ? items.slice(0, KEPLER_ORBITS.length).map((it, i) => (
+            <group key={`orbit-${it.key}`}>
+              <EllipseRing orbit={KEPLER_ORBITS[i]} color={cfg.ring} />
+              <SweptArea
+                orbit={KEPLER_ORBITS[i]}
+                clock={clock}
+                color={cfg.colors[i % cfg.colors.length]}
+                active={it.key === selectedKey}
+              />
+            </group>
+          ))
+        : cfg.radii.slice(0, Math.min(items.length, cfg.radii.length)).map((r) => (
+            <mesh key={r} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[r - 0.01, r + 0.01, 160, 1]} />
+              <meshBasicMaterial color={cfg.ring} transparent opacity={0.16} side={THREE.DoubleSide} />
+            </mesh>
+          ))}
+      {items.slice(0, isKepler ? KEPLER_ORBITS.length : items.length).map((item, i) => (
         <Planet
           key={item.key}
           item={item}
           index={i}
           total={items.length}
           radius={cfg.radii[i % cfg.radii.length]}
+          kepler={isKepler ? KEPLER_ORBITS[i] : undefined}
+          clock={clock}
           color={cfg.colors[i % cfg.colors.length]}
           selected={item.key === selectedKey}
           holeRef={holeRef}
@@ -416,19 +566,30 @@ function ViewShift({ x, y }: { x: number; y: number }) {
 }
 
 /**
- * Controla a câmera em três momentos:
+ * Controla a câmera em quatro momentos:
  *  1. aproximação inicial, quando o site abre (a câmera chega de longe);
- *  2. a "queda": com `dive` verdadeiro ela mergulha no buraco negro (acelerando e girando);
- *  3. o retorno: com `dive` falso ela sobe de novo até onde estava.
+ *  2. "pose": nas seções com planetas ela sobe para ver as órbitas de cima, e desce de volta depois;
+ *  3. a "queda": com `dive` verdadeiro ela mergulha no buraco negro (acelerando e girando);
+ *  4. o retorno da queda.
  * Também avisa a distância da câmera (para o rótulo de dilatação do tempo).
  */
 const DIVE_DIST = 3.0; // pouco além de 5 rs: um círculo preto emoldurado pelo anel de luz
+const HOME_DIR = new THREE.Vector3(0, 1.2, 15).normalize();
+// De onde as elipses aparecem quase de frente: perto da normal do plano das órbitas, um pouco para trás.
+const ORBITS_DIR = new THREE.Vector3(0, 1, 0)
+  .applyEuler(new THREE.Euler(...ORBIT_TILT))
+  .multiplyScalar(0.85)
+  .add(new THREE.Vector3(0, 0, 0.5))
+  .normalize();
+
 function CameraRig({
   dive,
+  pose,
   reduced,
   onDistance,
 }: {
   dive: boolean;
+  pose: "home" | "orbits";
   reduced: boolean;
   onDistance?: (d: number) => void;
 }) {
@@ -439,18 +600,35 @@ function CameraRig({
     intro: reduced ? 1 : 0,
     p: 0,
     home: 15,
-    dir: new THREE.Vector3(0, 1.2, 15).normalize(),
+    dir: HOME_DIR.clone(),
     last: -1,
     frame: 0,
+    // tween de pose
+    pose: "home" as "home" | "orbits",
+    pending: false,
+    active: false,
+    t: 0,
+    fromDir: new THREE.Vector3(),
+    fromDist: 15,
+    toDir: new THREE.Vector3(),
+    toDist: 15,
   });
+
+  useEffect(() => {
+    if (st.current.pose !== pose) {
+      st.current.pose = pose;
+      st.current.pending = true;
+    }
+  }, [pose]);
 
   useFrame((_, dt) => {
     const s = st.current;
     const d = Math.min(dt, 0.05);
+    const lite = size.width < 700;
 
     if (!s.started) {
       s.started = true;
-      s.home = size.width < 700 ? 22 : 15;
+      s.home = lite ? 27 : 15;
       camera.position.copy(s.dir).multiplyScalar(s.home);
       camera.lookAt(0, 0, 0);
     }
@@ -465,9 +643,39 @@ function CameraRig({
       if (s.intro >= 1 && controls) controls.enabled = true;
     } else if (dive) {
       s.intro = 1;
+      s.pending = false;
+      s.active = false;
     }
 
-    // 2) e 3) queda e retorno
+    // 2) mudança de pose (home <-> órbitas vistas de cima)
+    if (s.pending && s.intro >= 1 && !dive && s.p === 0) {
+      s.pending = false;
+      s.active = true;
+      s.t = 0;
+      s.fromDist = camera.position.length();
+      s.fromDir.copy(camera.position).normalize();
+      const orbits = s.pose === "orbits";
+      s.toDir.copy(orbits ? ORBITS_DIR : HOME_DIR);
+      s.toDist = orbits ? (lite ? 38 : 24) : s.home;
+      if (controls) controls.enabled = false;
+    }
+    if (s.active && !dive && s.p === 0) {
+      s.t = Math.min(1, s.t + d / 1.7);
+      const e = s.t < 0.5 ? 4 * s.t * s.t * s.t : 1 - Math.pow(-2 * s.t + 2, 3) / 2;
+      const q = new THREE.Quaternion().setFromUnitVectors(s.fromDir, s.toDir);
+      const qi = new THREE.Quaternion().slerp(q, e);
+      camera.position
+        .copy(s.fromDir)
+        .applyQuaternion(qi)
+        .multiplyScalar(THREE.MathUtils.lerp(s.fromDist, s.toDist, e));
+      camera.lookAt(0, 0, 0);
+      if (s.t >= 1) {
+        s.active = false;
+        if (controls) controls.enabled = true;
+      }
+    }
+
+    // 3) e 4) queda e retorno
     const target = dive ? 1 : 0;
     if (!(s.p === 0 && target === 0)) {
       if (s.p === 0) {
@@ -516,6 +724,7 @@ export default function BlackHoleScene({
   showOrbits,
   shift,
   dive,
+  pose,
   onDistance,
 }: {
   items: OrbitItem[];
@@ -529,6 +738,8 @@ export default function BlackHoleScene({
   shift: { x: number; y: number };
   /** Mergulha no buraco negro (animação da seção Sobre). */
   dive: boolean;
+  /** "orbits": a câmera sobe para ver as órbitas de cima (seções Projetos e Trajetória). */
+  pose: "home" | "orbits";
   onDistance?: (d: number) => void;
 }) {
   const holeRef = useRef<THREE.Mesh>(null);
@@ -541,7 +752,7 @@ export default function BlackHoleScene({
       onPointerMissed={() => onSelect(null)}
     >
       <color attach="background" args={["#040203"]} />
-      <CameraRig dive={dive} reduced={reduced} onDistance={onDistance} />
+      <CameraRig dive={dive} pose={pose} reduced={reduced} onDistance={onDistance} />
       <ViewShift x={shift.x} y={shift.y} />
 
       <ambientLight intensity={0.22} />
@@ -595,7 +806,7 @@ export default function BlackHoleScene({
         enableDamping
         dampingFactor={0.06}
         minDistance={4}
-        maxDistance={26}
+        maxDistance={52}
         rotateSpeed={0.55}
         zoomSpeed={0.6}
       />

@@ -1,6 +1,6 @@
 import { getFaqs, getProfile, getProjects, getSkills } from "@/db/queries";
 import { UniversoHome } from "@/components/universo/universo-home";
-import { publicImageSrc } from "@/lib/image-data";
+import { projectImageSrc, publicImageSrc } from "@/lib/image-data";
 import type { OrbitProject } from "@/lib/orbit";
 import { TIMELINE } from "@/lib/timeline";
 
@@ -19,8 +19,8 @@ export default async function HomePage() {
     id: p.id,
     title: p.title,
     description: p.description,
-    // imagens enviadas pelo admin saem por /imagem/projeto/ID (endereço curto), não dentro do HTML
-    imageUrl: publicImageSrc(p.imageUrl, `/imagem/projeto/${p.id}`),
+    // a imagem sai sempre por /imagem/projeto/ID (mesmo site: sem problema de CORS e sem peso no HTML)
+    imageUrl: projectImageSrc(p.id, p.imageUrl),
     liveUrl: p.liveUrl,
     githubUrl: p.githubUrl,
     technologies: p.technologies,

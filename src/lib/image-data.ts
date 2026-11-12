@@ -40,3 +40,8 @@ export function publicImageSrc(value: string | null, route: string): string | nu
   if (!value) return null;
   return isImageDataUrl(value) ? `${route}?v=${versionOf(value)}` : value;
 }
+
+/** Endereço da imagem de um projeto: sempre pelo próprio site (a rota busca no banco ou no link cadastrado). */
+export function projectImageSrc(id: number, imageUrl: string | null): string | null {
+  return imageUrl ? `/imagem/projeto/${id}?v=${versionOf(imageUrl)}` : null;
+}

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import type { Faq, Profile, Skill } from "@/db/schema";
 import { SKILL_CATEGORIES, SKILL_CATEGORY_LABELS } from "@/lib/constants";
 import type { OrbitProject } from "@/lib/orbit";
+import { KEPLER_ORBITS, keplerPeriod } from "@/lib/kepler";
 import { dilationFactor, formatLongerTime, RS_PER_SCENE_UNIT } from "@/lib/physics";
 import type { TimelineItem } from "@/lib/timeline";
 import { useAmbientSound } from "./ambient-sound";
@@ -80,6 +81,8 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
   const [env, setEnv] = useState<Env | null>(null);
   const [view, setViewState] = useState<View>("inicio");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [projMode, setProjMode] = useState<"orbita" | "todos">("orbita");
+  const [tour, setTour] = useState(false);
   const [dist, setDist] = useState<number | null>(null);
   const sound = useAmbientSound();
 
@@ -104,6 +107,36 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
     setSelectedKey(null);
     window.history.replaceState(null, "", next === "inicio" ? window.location.pathname : `#${next}`);
   }, []);
+
+  // Os 3 primeiros projetos (na ordem do admin) viram planetas em órbita de Kepler; os demais ficam na lista.
+  const featured = projects.slice(0, KEPLER_ORBITS.length);
+  const firstKeyRef = useRef<string | null>(null);
+  firstKeyRef.current = featured[0] ? `p-${featured[0].id}` : null;
+
+  // Ao entrar em Projetos: abre o primeiro destaque e começa uma visita automática pelos 3.
+  useEffect(() => {
+    if (view !== "projetos") return;
+    setProjMode("orbita");
+    setTour(true);
+    setSelectedKey(firstKeyRef.current);
+  }, [view]);
+
+  useEffect(() => {
+    if (!tour || view !== "projetos" || projMode !== "orbita" || featured.length < 2) return;
+    const id = window.setTimeout(() => {
+      const i = featured.findIndex((p) => `p-${p.id}` === selectedKey);
+      const next = featured[(i + 1) % featured.length];
+      setSelectedKey(`p-${next.id}`);
+    }, 9000);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tour, view, projMode, selectedKey]);
+
+  // Qualquer escolha feita pela pessoa encerra a visita automática.
+  const pick = (key: string | null) => {
+    setTour(false);
+    setSelectedKey(key);
+  };
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -167,26 +200,32 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (selectedKey !== null) setSelectedKey(null);
+      if (selectedKey !== null) pick(null);
       else if (view !== "inicio") go("inicio");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedKey, view, go]);
 
-  const projectItems: OrbitItem[] = projects.map((p) => ({
+  const projectItems: OrbitItem[] = featured.map((p) => ({
     key: `p-${p.id}`,
     label: p.title,
     imageUrl: p.imageUrl,
   }));
   const timelineItems: OrbitItem[] = timeline.map((t) => ({ key: `t-${t.id}`, label: t.label, imageUrl: null }));
 
-  const projectIndex = projects.findIndex((p) => `p-${p.id}` === selectedKey);
-  const selectedProject = view === "projetos" && projectIndex >= 0 ? projects[projectIndex] : null;
+  const projectIndex = featured.findIndex((p) => `p-${p.id}` === selectedKey);
+  const selectedProject =
+    view === "projetos" && projMode === "orbita" && projectIndex >= 0 ? featured[projectIndex] : null;
   const timelineIndex = timeline.findIndex((t) => `t-${t.id}` === selectedKey);
   const selectedStep = view === "trajetoria" && timelineIndex >= 0 ? timeline[timelineIndex] : null;
 
-  const sidePanel = view === "tecnologias" || view === "perguntas" || view === "contato";
+  const sidePanel =
+    view === "tecnologias" ||
+    view === "perguntas" ||
+    view === "contato" ||
+    (view === "projetos" && projMode === "todos");
+  const showOrbits = (view === "projetos" && projMode === "orbita") || view === "trajetoria";
   const bottomCard = selectedProject !== null || selectedStep !== null;
 
   // Empurra o buraco negro para o lado/para cima quando há painel, para ele continuar visível ao fundo.
@@ -204,16 +243,17 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-bh-void font-display text-bh-text">
       {/* Cena 3D */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-0">
         {env?.webgl && (
           <Scene
             items={view === "trajetoria" ? timelineItems : projectItems}
             itemStyle={view === "trajetoria" ? "timeline" : "projects"}
             selectedKey={selectedKey}
-            onSelect={setSelectedKey}
+            onSelect={pick}
             reduced={env.reduced}
             lite={env.lite}
-            showOrbits={view === "projetos" || view === "trajetoria"}
+            showOrbits={showOrbits}
+            pose={showOrbits ? "orbits" : "home"}
             shift={shift}
             dive={view === "sobre" && !env.reduced}
             onDistance={setDist}
@@ -334,27 +374,59 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
 
           {view === "projetos" && (
             <>
-              {selectedProject && (
-                <ProjectCard
-                  key={selectedProject.id}
-                  project={selectedProject}
-                  index={projectIndex}
-                  total={projects.length}
-                  onClose={() => setSelectedKey(null)}
-                />
+              {/* Dois modos: os 3 destaques em órbita de Kepler, ou a lista com todos os projetos */}
+              <div className="pointer-events-auto mb-2 flex justify-center gap-1 px-4">
+                <ModeButton
+                  active={projMode === "orbita"}
+                  onClick={() => {
+                    setProjMode("orbita");
+                    pick(firstKeyRef.current);
+                  }}
+                >
+                  Em órbita
+                </ModeButton>
+                <ModeButton
+                  active={projMode === "todos"}
+                  onClick={() => {
+                    setProjMode("todos");
+                    pick(null);
+                  }}
+                >
+                  Todos os projetos ({projects.length})
+                </ModeButton>
+              </div>
+
+              {projMode === "orbita" && (
+                <>
+                  {selectedProject && (
+                    <ProjectCard
+                      key={selectedProject.id}
+                      project={selectedProject}
+                      kicker={`// destaque ${String(projectIndex + 1).padStart(2, "0")}/${String(featured.length).padStart(2, "0")}`}
+                      orbit={KEPLER_ORBITS[projectIndex]}
+                      onClose={() => pick(null)}
+                    />
+                  )}
+                  <Dock
+                    items={projectItems}
+                    selectedKey={selectedKey}
+                    onSelect={pick}
+                    hint={
+                      projects.length === 0
+                        ? "nenhum projeto em órbita ainda"
+                        : tour
+                          ? "visita automática pelos destaques · toque em qualquer coisa para assumir o controle"
+                          : "elipses de Kepler com o buraco negro no foco · quanto maior a órbita, mais lenta (T² ∝ a³)"
+                    }
+                  />
+                </>
               )}
-              <Dock
-                items={projectItems}
-                selectedKey={selectedKey}
-                onSelect={setSelectedKey}
-                hint={
-                  projects.length === 0
-                    ? "nenhum projeto em órbita ainda"
-                    : selectedProject
-                      ? null
-                      : "arraste para girar · role para aproximar · toque num planeta"
-                }
-              />
+
+              {projMode === "todos" && (
+                <Panel title="Todos os projetos" kicker="// lista completa" onClose={() => setProjMode("orbita")}>
+                  <AllProjectsPanel projects={projects} />
+                </Panel>
+              )}
             </>
           )}
 
@@ -366,13 +438,13 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
                   step={selectedStep}
                   index={timelineIndex}
                   total={timeline.length}
-                  onClose={() => setSelectedKey(null)}
+                  onClose={() => pick(null)}
                 />
               )}
               <Dock
                 items={timelineItems}
                 selectedKey={selectedKey}
-                onSelect={setSelectedKey}
+                onSelect={pick}
                 hint={selectedStep ? null : "cada planeta é uma etapa da minha trajetória · toque num deles"}
               />
             </>
@@ -545,8 +617,13 @@ function Hero({ profile, year, onGo }: { profile: Profile; year: number; onGo: (
       </p>
 
       <div className="pointer-events-auto mt-5 flex flex-wrap gap-2">
-        <button type="button" onClick={() => onGo("projetos")} className={ds.btnPrimary}>
-          Explorar projetos
+        <button type="button" onClick={() => onGo("projetos")} className={`${ds.btnPrimary} relative`}>
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 animate-ping rounded-full border border-bh-amber/60 motion-reduce:hidden"
+          />
+          Entrar em órbita
+          <span aria-hidden="true">→</span>
         </button>
         <button type="button" onClick={() => onGo("contato")} className={ds.btnGhost}>
           Falar comigo
@@ -743,15 +820,36 @@ function ContactPanel({ profile }: { profile: Profile }) {
   );
 }
 
+function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        "rounded-full border px-3.5 py-1.5 font-code text-xs transition " +
+        (active
+          ? "border-bh-ember bg-bh-ember/15 text-bh-flare"
+          : "border-bh-line bg-bh-surface/60 text-bh-mute hover:text-bh-flare")
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+const nfBr = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+
+/** Cartão do projeto em destaque: imagem inteira ao lado da descrição e os dados da órbita (Kepler). */
 function ProjectCard({
   project,
-  index,
-  total,
+  kicker,
+  orbit,
   onClose,
 }: {
   project: OrbitProject;
-  index: number;
-  total: number;
+  kicker: string;
+  orbit?: (typeof KEPLER_ORBITS)[number];
   onClose: () => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -769,17 +867,14 @@ function ProjectCard({
           src={project.imageUrl!}
           alt={`Imagem do projeto ${project.title}`}
           loading="lazy"
-          referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
-          className="mb-3 h-32 w-full rounded-xl border border-bh-line object-cover sm:mb-0 sm:aspect-video sm:h-auto sm:w-[20rem] sm:shrink-0"
+          className="mb-3 h-auto max-h-52 w-full rounded-xl border border-bh-line bg-bh-void/50 object-contain sm:mb-0 sm:max-h-64 sm:w-[20rem] sm:shrink-0"
         />
       )}
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <p className={ds.eyebrow}>
-            {`// projeto ${String(index + 1).padStart(2, "0")}/${String(total).padStart(2, "0")}`}
-          </p>
+          <p className={ds.eyebrow}>{kicker}</p>
           <button
             type="button"
             onClick={onClose}
@@ -791,7 +886,7 @@ function ProjectCard({
         </div>
 
         <h2 className="mt-1 text-xl font-semibold text-bh-flare">{project.title}</h2>
-        <p className="mt-2 max-h-36 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-bh-text/90 sm:max-h-44">
+        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-bh-text/90 sm:max-h-44 sm:overflow-y-auto">
           {project.description}
         </p>
 
@@ -819,8 +914,87 @@ function ProjectCard({
             )}
           </div>
         )}
+
+        {orbit && (
+          <p className="mt-4 border-t border-bh-line/60 pt-3 font-code text-[11px] leading-relaxed text-bh-mute">
+            órbita de Kepler: excentricidade e = {nfBr.format(orbit.e)} · período T ≈ {nfBr.format(keplerPeriod(orbit))} s
+            <br />
+            a região clara no plano da órbita é a área varrida em 1/8 do período, sempre a mesma (2ª lei).
+          </p>
+        )}
       </div>
     </section>
+  );
+}
+
+/** Lista de todos os projetos, sem planetas: cada item abre com a imagem inteira, a descrição e os links. */
+function AllProjectsPanel({ projects }: { projects: OrbitProject[] }) {
+  if (projects.length === 0) return <p className="text-bh-mute">Nenhum projeto cadastrado ainda.</p>;
+  return (
+    <div className="divide-y divide-bh-line/60">
+      {projects.map((p) => (
+        <details key={p.id} className="group py-3">
+          <summary className="flex cursor-pointer list-none items-center gap-3 marker:hidden">
+            {p.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={p.imageUrl}
+                alt=""
+                loading="lazy"
+                className="h-12 w-16 shrink-0 rounded-md border border-bh-line bg-bh-void/50 object-contain"
+              />
+            ) : (
+              <span aria-hidden className="grid h-12 w-16 shrink-0 place-items-center rounded-md border border-bh-line font-code text-lg text-bh-amber">
+                {p.title.slice(0, 1)}
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-bh-flare">{p.title}</span>
+              <span className="block truncate font-code text-xs text-bh-mute">{p.technologies.slice(0, 3).join(" · ")}</span>
+            </span>
+            <span aria-hidden className="font-code text-bh-ember transition group-open:rotate-45">
+              +
+            </span>
+          </summary>
+
+          <div className="mt-3 space-y-3">
+            {p.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={p.imageUrl}
+                alt={`Imagem do projeto ${p.title}`}
+                loading="lazy"
+                className="max-h-56 w-full rounded-xl border border-bh-line bg-bh-void/50 object-contain"
+              />
+            )}
+            <p className="whitespace-pre-line text-bh-text/90">{p.description}</p>
+            {p.technologies.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5">
+                {p.technologies.map((t) => (
+                  <li key={t} className={ds.tag}>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {(p.liveUrl || p.githubUrl) && (
+              <div className="flex flex-wrap gap-2">
+                {p.liveUrl && (
+                  <a href={p.liveUrl} target="_blank" rel="noopener noreferrer" className={ds.btnPrimary}>
+                    Ver online
+                  </a>
+                )}
+                {p.githubUrl && (
+                  <a href={p.githubUrl} target="_blank" rel="noopener noreferrer" className={ds.btnGhost}>
+                    Código no GitHub
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
   );
 }
 
