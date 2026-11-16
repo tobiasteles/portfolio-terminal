@@ -8,7 +8,7 @@ import { SKILL_CATEGORIES, SKILL_CATEGORY_LABELS } from "@/lib/constants";
 
 function SkillFields({ skill }: { skill?: Skill }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-[1fr_12rem_8rem]">
+    <div className="grid gap-4 sm:grid-cols-[1fr_12rem_8rem_8rem]">
       <Field label="nome" name="name" defaultValue={skill?.name} required maxLength={80} />
       <label className="grid gap-1">
         <span className="text-sm text-term-dim">categoria</span>
@@ -21,6 +21,7 @@ function SkillFields({ skill }: { skill?: Skill }) {
         </select>
       </label>
       <Field label="nível (0 a 100)" name="level" type="number" min={0} max={100} defaultValue={skill?.level ?? 70} required />
+      <Field label="desde (ano)" name="since" type="number" min={1990} max={new Date().getFullYear()} defaultValue={skill?.since ?? ""} placeholder="2024" />
     </div>
   );
 }
@@ -31,7 +32,7 @@ export default async function SkillsPage() {
 
   return (
     <>
-      <PageHeader title="tecnologias" description="Aparecem no comando skills, agrupadas por categoria." />
+      <PageHeader title="tecnologias" description="Aparecem na seção Tecnologias do site, com o ano em que você começou a usar cada uma e os projetos que a usam." />
 
       <details className="card mb-6">
         <summary className="cursor-pointer text-term-neon">+ nova tecnologia</summary>
@@ -58,7 +59,7 @@ export default async function SkillsPage() {
                       <details>
                         <summary className="flex cursor-pointer items-center justify-between gap-3">
                           <span>{skill.name}</span>
-                          <span className="tabular-nums text-term-dim">{skill.level}%</span>
+                          <span className="tabular-nums text-term-dim">{skill.since ? `desde ${skill.since}` : "sem ano"}</span>
                         </summary>
                         <form action={updateSkill.bind(null, skill.id)} className="mt-4 grid gap-4">
                           <SkillFields skill={skill} />

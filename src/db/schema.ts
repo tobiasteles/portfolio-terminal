@@ -35,6 +35,8 @@ export const skills = pgTable("skills", {
   name: varchar("name", { length: 80 }).notNull(),
   /** Nível de proficiência de 0 a 100. */
   level: integer("level").notNull().default(70),
+  /** Ano em que começou a usar a tecnologia (opcional). */
+  since: integer("since"),
 });
 
 export const projects = pgTable("projects", {

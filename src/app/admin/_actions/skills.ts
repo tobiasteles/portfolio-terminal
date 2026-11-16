@@ -12,6 +12,12 @@ const schema = z.object({
   name: z.string().trim().min(1).max(80),
   category: z.enum(SKILL_CATEGORIES),
   level: z.coerce.number().int().min(0).max(100),
+  // "desde" (ano): opcional. Campo vazio vira null.
+  since: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : Number(v)))
+    .pipe(z.number().int().min(1990).max(new Date().getFullYear()).nullable()),
 });
 
 function refresh() {

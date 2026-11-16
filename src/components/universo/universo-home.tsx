@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import type { Faq, Profile, Skill } from "@/db/schema";
 import { SKILL_CATEGORIES, SKILL_CATEGORY_LABELS } from "@/lib/constants";
 import type { OrbitProject } from "@/lib/orbit";
+import { projectsUsing } from "@/lib/skill-match";
 import { KEPLER_ORBITS, keplerPeriod } from "@/lib/kepler";
 import { dilationFactor, formatLongerTime, RS_PER_SCENE_UNIT } from "@/lib/physics";
 import type { TimelineItem } from "@/lib/timeline";
@@ -83,6 +84,9 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [projMode, setProjMode] = useState<"orbita" | "todos">("orbita");
   const [tour, setTour] = useState(false);
+  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  // projeto que a pessoa pediu para abrir a partir de uma tecnologia (consumido ao entrar em Projetos)
+  const pendingProject = useRef<number | null>(null);
   const [dist, setDist] = useState<number | null>(null);
   const sound = useAmbientSound();
 
@@ -105,6 +109,7 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
   const go = useCallback((next: View) => {
     setViewState(next);
     setSelectedKey(null);
+    setOpenProjectId(null);
     window.history.replaceState(null, "", next === "inicio" ? window.location.pathname : `#${next}`);
   }, []);
 
@@ -116,10 +121,45 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
   // Ao entrar em Projetos: abre o primeiro destaque e começa uma visita automática pelos 3.
   useEffect(() => {
     if (view !== "projetos") return;
+    const wanted = pendingProject.current;
+    pendingProject.current = null;
+    if (wanted !== null) {
+      // veio de uma tecnologia: abre exatamente aquele projeto
+      setTour(false);
+      if (featured.some((p) => p.id === wanted)) {
+        setProjMode("orbita");
+        setSelectedKey(`p-${wanted}`);
+      } else {
+        setProjMode("todos");
+        setSelectedKey(null);
+        setOpenProjectId(wanted);
+      }
+      return;
+    }
     setProjMode("orbita");
     setTour(true);
     setSelectedKey(firstKeyRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
+
+  const openProject = (id: number) => {
+    pendingProject.current = id;
+    if (view === "projetos") {
+      // já estamos em Projetos: o efeito acima não roda de novo, então aplica direto
+      pendingProject.current = null;
+      setTour(false);
+      if (featured.some((p) => p.id === id)) {
+        setProjMode("orbita");
+        setSelectedKey(`p-${id}`);
+      } else {
+        setProjMode("todos");
+        setSelectedKey(null);
+        setOpenProjectId(id);
+      }
+    } else {
+      go("projetos");
+    }
+  };
 
   useEffect(() => {
     if (!tour || view !== "projetos" || projMode !== "orbita" || featured.length < 2) return;
@@ -356,7 +396,7 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
 
           {view === "tecnologias" && (
             <Panel title="Tecnologias" kicker="// o que eu uso" onClose={() => go("inicio")}>
-              <SkillsPanel skills={skills} />
+              <SkillsPanel skills={skills} projects={projects} year={year} onOpenProject={openProject} />
             </Panel>
           )}
 
@@ -424,7 +464,7 @@ export function UniversoHome({ profile, skills, faqs, projects, timeline, year }
 
               {projMode === "todos" && (
                 <Panel title="Todos os projetos" kicker="// lista completa" onClose={() => setProjMode("orbita")}>
-                  <AllProjectsPanel projects={projects} />
+                  <AllProjectsPanel projects={projects} openId={openProjectId} />
                 </Panel>
               )}
             </>
@@ -744,33 +784,74 @@ function InsideAbout({ profile, onBack }: { profile: Profile; onBack: () => void
   );
 }
 
-function SkillsPanel({ skills }: { skills: Skill[] }) {
+/** "desde 2024 · 3 anos" */
+function sinceLabel(since: number, year: number) {
+  const y = year - since;
+  const span = y <= 0 ? "menos de 1 ano" : y === 1 ? "1 ano" : `${y} anos`;
+  return `desde ${since} · ${span}`;
+}
+
+function SkillsPanel({
+  skills,
+  projects,
+  year,
+  onOpenProject,
+}: {
+  skills: Skill[];
+  projects: OrbitProject[];
+  year: number;
+  onOpenProject: (id: number) => void;
+}) {
   if (skills.length === 0) return <p className="text-bh-mute">Nenhuma tecnologia cadastrada ainda.</p>;
   return (
     <div className="space-y-5">
+      <p className="font-code text-[11px] leading-relaxed text-bh-mute">
+        em vez de porcentagem: desde quando eu uso cada tecnologia e os projetos em que ela aparece. Toque num projeto para abri-lo.
+      </p>
       {SKILL_CATEGORIES.map((category) => {
-        const items = skills.filter((s) => s.category === category);
+        const items = skills
+          .filter((s) => s.category === category)
+          .map((skill) => ({ skill, used: projectsUsing(skill.name, projects) }))
+          // mais projetos primeiro; empate: quem uso há mais tempo
+          .sort(
+            (a, b) =>
+              b.used.length - a.used.length ||
+              (a.skill.since ?? 9999) - (b.skill.since ?? 9999) ||
+              b.skill.level - a.skill.level,
+          );
         if (items.length === 0) return null;
         return (
           <section key={category}>
             <h3 className={ds.eyebrow}>{SKILL_CATEGORY_LABELS[category]}</h3>
-            <ul className="mt-2 space-y-2.5">
-              {items.map((skill) => (
+            <ul className="mt-2 space-y-3">
+              {items.map(({ skill, used }) => (
                 <li key={skill.id}>
                   <div className="flex items-baseline justify-between gap-3">
                     <span>{skill.name}</span>
-                    <span className="font-code text-xs tabular-nums text-bh-mute">{skill.level}%</span>
+                    {skill.since && (
+                      <span className="shrink-0 font-code text-xs text-bh-amber">{sinceLabel(skill.since, year)}</span>
+                    )}
                   </div>
-                  <div
-                    role="img"
-                    aria-label={`${skill.name}: ${skill.level}%`}
-                    className="mt-1 h-1.5 w-full rounded-full bg-bh-line/60"
-                  >
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-bh-amber to-bh-ember"
-                      style={{ width: `${Math.max(0, Math.min(100, skill.level))}%` }}
-                    />
-                  </div>
+                  <p className="mt-0.5 font-code text-xs text-bh-mute">
+                    {used.length === 0
+                      ? "sem projeto cadastrado"
+                      : `usada em ${used.length} ${used.length === 1 ? "projeto" : "projetos"}`}
+                  </p>
+                  {used.length > 0 && (
+                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                      {used.map((p) => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            onClick={() => onOpenProject(p.id)}
+                            className="rounded-full border border-bh-line px-2.5 py-0.5 font-code text-xs text-bh-text transition hover:border-bh-ember hover:text-bh-flare"
+                          >
+                            {p.title}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>
@@ -928,12 +1009,21 @@ function ProjectCard({
 }
 
 /** Lista de todos os projetos, sem planetas: cada item abre com a imagem inteira, a descrição e os links. */
-function AllProjectsPanel({ projects }: { projects: OrbitProject[] }) {
+function AllProjectsPanel({ projects, openId }: { projects: OrbitProject[]; openId: number | null }) {
+  useEffect(() => {
+    if (openId !== null) document.getElementById(`proj-${openId}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [openId]);
+
   if (projects.length === 0) return <p className="text-bh-mute">Nenhum projeto cadastrado ainda.</p>;
   return (
     <div className="divide-y divide-bh-line/60">
       {projects.map((p) => (
-        <details key={p.id} className="group py-3">
+        <details
+          key={`${p.id}-${openId === p.id}`}
+          id={`proj-${p.id}`}
+          open={openId === p.id ? true : undefined}
+          className="group py-3"
+        >
           <summary className="flex cursor-pointer list-none items-center gap-3 marker:hidden">
             {p.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
